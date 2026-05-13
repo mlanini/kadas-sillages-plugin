@@ -1,0 +1,17 @@
+[general]
+name=KADAS Sillages
+qgisMinimumVersion=3.0
+qgisMaximumVersion=3.99
+version=0.1.0
+author=INTELLIGEO.ch
+email=ask@intelligeo.ch
+description=Live device tracking via Traccar server. Displays positions and tracks on the KADAS map canvas with customizable appearance.
+about=Connects to a Traccar GNSS tracking server, lists managed devices and shows their live positions and historical tracks on the KADAS map. Supports custom icons, labels, track color and thickness.
+tracker=https://github.com/intelligeo/kadas-sillages-plugin
+repository=https://github.com/intelligeo/kadas-sillages-plugin
+tags=tracking,GNSS,GPS,live,Traccar,fleet
+homepage=https://github.com/intelligeo/kadas-sillages-plugin
+category=Plugins
+icon=resources/icon.svg
+experimental=False
+deprecated=False
