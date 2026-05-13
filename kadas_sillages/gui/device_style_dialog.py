@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-DeviceStyleDialog: dialog per personalizzare l'aspetto di un singolo device.
+DeviceStyleDialog: dialog for customising the appearance of a single device.
 
-Permette di configurare:
-  • Icona (SVG/PNG da file)
-  • Colore traccia (color picker Qt)
-  • Spessore traccia
-  • Lunghezza massima traccia (numero punti)
-  • Visibilità etichetta nome
+Allows configuring:
+  • Icon (SVG/PNG from file)
+  • Track colour (Qt colour picker)
+  • Track width
+  • Maximum track length (number of points)
+  • Device name label visibility
 """
 from __future__ import annotations
 
@@ -42,13 +42,13 @@ from ..logger import get_logger
 
 log = get_logger(__name__)
 
-# Icona predefinita per il preview (stessa usata da LayerStyler)
+# Default icon for the preview (same as used by LayerStyler)
 _DEFAULT_ICON = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "resources", "kadas_star.png",
 )
 
-# Directory marker SVG predefiniti
+# Directory of preset SVG markers
 _MARKERS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "resources", "markers",
@@ -56,7 +56,7 @@ _MARKERS_DIR = os.path.join(
 
 
 def _load_svg_icon(path: str, size: int = 32) -> QIcon:
-    """Rasterizza un SVG in un QIcon della dimensione richiesta."""
+    """Rasterise an SVG into a QIcon of the requested size."""
     from qgis.PyQt.QtGui import QImage, QPainter
     img = QImage(size, size, QImage.Format_ARGB32)
     img.fill(0)
@@ -68,12 +68,12 @@ def _load_svg_icon(path: str, size: int = 32) -> QIcon:
 
 
 class DeviceStyleDialog(QDialog):
-    """Dialog modale per personalizzare l'aspetto visivo di un Device."""
+    """Modal dialog for customising the visual appearance of a Device."""
 
     def __init__(self, device: Device, parent=None):
         super().__init__(parent)
         self._device = device
-        self.setWindowTitle(f"Stile – {device.name}")
+        self.setWindowTitle(f"Style – {device.name}")
         self.setMinimumWidth(480)
         self._build_ui()
         self._load()
@@ -85,12 +85,12 @@ class DeviceStyleDialog(QDialog):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        # ----- Gruppo icona -----
-        grp_icon = QGroupBox("Icona dispositivo")
+        # ----- Icon group -----
+        grp_icon = QGroupBox("Device icon")
         v_icon = QVBoxLayout(grp_icon)
 
-        # Griglia marker SVG predefiniti
-        lbl_preset = QLabel("Marcatori predefiniti:")
+        # Preset SVG marker grid
+        lbl_preset = QLabel("Preset markers:")
         lbl_preset.setStyleSheet("font-size: 10px; color: gray;")
         v_icon.addWidget(lbl_preset)
 
@@ -145,15 +145,15 @@ class DeviceStyleDialog(QDialog):
             "border: 1px solid #ccc; border-radius: 4px;"
         )
         self._icon_edit = QLineEdit()
-        self._icon_edit.setPlaceholderText("(icona predefinita)")
+        self._icon_edit.setPlaceholderText("(default icon)")
         self._icon_edit.setReadOnly(True)
         self._btn_icon_browse = QPushButton("…")
         self._btn_icon_browse.setFixedWidth(28)
-        self._btn_icon_browse.setToolTip("Sfoglia file…")
+        self._btn_icon_browse.setToolTip("Browse file…")
         self._btn_icon_browse.clicked.connect(self._browse_icon)
         self._btn_icon_clear = QPushButton("✕")
         self._btn_icon_clear.setFixedWidth(28)
-        self._btn_icon_clear.setToolTip("Usa icona predefinita")
+        self._btn_icon_clear.setToolTip("Use default icon")
         self._btn_icon_clear.clicked.connect(self._clear_icon)
 
         h_icon.addWidget(self._icon_preview)
@@ -163,11 +163,11 @@ class DeviceStyleDialog(QDialog):
         v_icon.addWidget(icon_row)
         layout.addWidget(grp_icon)
 
-        # ----- Gruppo traccia -----
-        grp_track = QGroupBox("Traccia")
+        # ----- Track group -----
+        grp_track = QGroupBox("Track")
         form_track = QFormLayout(grp_track)
 
-        # Colore
+        # Colour
         color_row = QWidget()
         h_color = QHBoxLayout(color_row)
         h_color.setContentsMargins(0, 0, 0, 0)
@@ -177,14 +177,14 @@ class DeviceStyleDialog(QDialog):
         self._color_edit = QLineEdit()
         self._color_edit.setPlaceholderText("#0000FF")
         self._color_edit.textChanged.connect(self._update_swatch)
-        self._btn_color = QPushButton("Scegli…")
+        self._btn_color = QPushButton("Pick…")
         self._btn_color.clicked.connect(self._pick_color)
         h_color.addWidget(self._color_swatch)
         h_color.addWidget(self._color_edit, 1)
         h_color.addWidget(self._btn_color)
-        form_track.addRow("Colore:", color_row)
+        form_track.addRow("Colour:", color_row)
 
-        # Spessore
+        # Width
         width_row = QWidget()
         h_width = QHBoxLayout(width_row)
         h_width.setContentsMargins(0, 0, 0, 0)
@@ -197,21 +197,21 @@ class DeviceStyleDialog(QDialog):
         self._width_slider.valueChanged.connect(self._width_spin.setValue)
         h_width.addWidget(self._width_spin)
         h_width.addWidget(self._width_slider, 1)
-        form_track.addRow("Spessore:", width_row)
+        form_track.addRow("Width:", width_row)
 
-        # Lunghezza massima
+        # Maximum length
         self._max_pts_spin = QSpinBox()
         self._max_pts_spin.setRange(2, 10000)
         self._max_pts_spin.setSingleStep(50)
-        self._max_pts_spin.setSuffix(" punti")
-        form_track.addRow("Lunghezza max:", self._max_pts_spin)
+        self._max_pts_spin.setSuffix(" pts")
+        form_track.addRow("Max length:", self._max_pts_spin)
 
         layout.addWidget(grp_track)
 
-        # ----- Gruppo etichetta -----
-        grp_label = QGroupBox("Etichetta")
+        # ----- Label group -----
+        grp_label = QGroupBox("Label")
         form_lbl = QFormLayout(grp_label)
-        self._show_label_cb = QCheckBox("Mostra nome dispositivo sulla mappa")
+        self._show_label_cb = QCheckBox("Show device name on the map")
         form_lbl.addRow("", self._show_label_cb)
         layout.addWidget(grp_label)
 
@@ -236,7 +236,7 @@ class DeviceStyleDialog(QDialog):
         self._width_spin.setValue(d.track_width)
         self._max_pts_spin.setValue(d.track_max_points)
         self._show_label_cb.setChecked(d.show_label)
-        # Seleziona il pulsante corrispondente nella griglia marker
+        # Select the corresponding button in the marker grid
         self._sync_marker_selection(d.icon_path)
 
     def _save(self):
@@ -248,22 +248,22 @@ class DeviceStyleDialog(QDialog):
         d.track_max_points = self._max_pts_spin.value()
         d.show_label = self._show_label_cb.isChecked()
         log.debug(
-            "Stile aggiornato per device %s: color=%s width=%d maxpts=%d label=%s",
+            "Style updated for device %s: color=%s width=%d maxpts=%d label=%s",
             d.name, d.track_color, d.track_width, d.track_max_points, d.show_label,
         )
         self.accept()
 
     # ------------------------------------------------------------------
-    # Slot interni
+    # Internal slots
     # ------------------------------------------------------------------
 
     def _browse_icon(self):
         start_dir = _MARKERS_DIR if os.path.isdir(_MARKERS_DIR) else ""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleziona icona",
+            "Select icon",
             start_dir,
-            "Immagini (*.svg *.png *.jpg *.jpeg *.bmp);;Tutti i file (*)",
+            "Images (*.svg *.png *.jpg *.jpeg *.bmp);;All files (*)",
         )
         if path:
             self._icon_edit.setText(path)
@@ -276,12 +276,12 @@ class DeviceStyleDialog(QDialog):
         self._sync_marker_selection(None)
 
     def _on_marker_selected(self, path: str):
-        """Chiamato quando l'utente clicca un marker predefinito."""
+        """Called when the user clicks a preset marker."""
         self._icon_edit.setText(path)
         self._update_icon_preview(path)
 
     def _sync_marker_selection(self, path: str | None):
-        """Aggiorna lo stato checked dei pulsanti marker in base al path."""
+        """Update the checked state of marker buttons based on the path."""
         norm = os.path.normcase(os.path.normpath(path)) if path else None
         for idx, fpath in enumerate(self._marker_svgs):
             btn = self._marker_btn_group.button(idx)
@@ -308,7 +308,7 @@ class DeviceStyleDialog(QDialog):
     def _pick_color(self):
         from qgis.PyQt.QtWidgets import QColorDialog
         initial = QColor(self._color_edit.text() or "#0000FF")
-        color = QColorDialog.getColor(initial, self, "Scegli colore traccia")
+        color = QColorDialog.getColor(initial, self, "Pick track colour")
         if color.isValid():
             self._color_edit.setText(color.name())
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Entry point del plugin KADAS Sillages.
-Chiamato da KADAS/QGIS al momento del caricamento del plugin.
+Entry point for the KADAS Sillages plugin.
+Called by KADAS/QGIS when the plugin is loaded.
 """
 
 

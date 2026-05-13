@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Classe principale del plugin KadasSillages.
+Main plugin class for KadasSillages.
 """
 import os
 
@@ -13,28 +13,28 @@ log = get_logger(__name__)
 
 
 class KadasSillagesPlugin:
-    """Plugin KADAS per il live tracking via server Traccar."""
+    """KADAS plugin for live tracking via Traccar server."""
 
     PLUGIN_NAME = "Sillages"
-    RIBBON_TAB = "GPS"          # Tab del ribbon KADAS dove aggiungere il pulsante
+    RIBBON_TAB = "GPS"          # KADAS ribbon tab where the button is placed
 
     def __init__(self, iface):
         try:
             from kadas.kadasgui import KadasPluginInterface
             self.iface = KadasPluginInterface.cast(iface)
         except Exception:
-            # Fallback per testing fuori da KADAS (QGIS puro)
+            # Fallback for testing outside KADAS (plain QGIS)
             self.iface = iface
 
         self._main_dock = None
         self._toggle_action = None
 
     # ------------------------------------------------------------------
-    # Ciclo di vita
+    # Lifecycle
     # ------------------------------------------------------------------
 
     def initGui(self):
-        """Chiamato da KADAS quando il plugin viene abilitato."""
+        """Called by KADAS when the plugin is enabled."""
         icon = QIcon(self._icon_path("icon.svg"))
 
         self._toggle_action = QAction(icon, self.PLUGIN_NAME, self.iface.mainWindow())
@@ -42,9 +42,9 @@ class KadasSillagesPlugin:
         self._toggle_action.setToolTip(self.tr("Live tracking Traccar"))
         self._toggle_action.toggled.connect(self._on_toggle)
 
-        # Aggiunge il pulsante al ribbon KADAS:
-        #   • tab GPS_TAB  (posizione principale)
-        #   • tab PLUGIN_MENU (tab "Plugins" — sempre visibile)
+        # Add the button to the KADAS ribbon:
+        #   • GPS_TAB  (primary position)
+        #   • PLUGIN_MENU ("Plugins" tab — always visible)
         try:
             from kadas.kadasgui import KadasPluginInterface
             self.iface.addAction(
@@ -60,10 +60,10 @@ class KadasSillagesPlugin:
         except Exception:
             self.iface.addPluginToMenu(self.PLUGIN_NAME, self._toggle_action)
 
-        log.info("KadasSillages: initGui completato")
+        log.info("KadasSillages: initGui complete")
 
     def unload(self):
-        """Chiamato da KADAS quando il plugin viene disabilitato o l'app si chiude."""
+        """Called by KADAS when the plugin is disabled or the application closes."""
         if self._main_dock is not None:
             self._main_dock.close()
             self.iface.mainWindow().removeDockWidget(self._main_dock)
@@ -88,14 +88,14 @@ class KadasSillagesPlugin:
             self._toggle_action.deleteLater()
             self._toggle_action = None
 
-        log.info("KadasSillages: unload completato")
+        log.info("KadasSillages: unload complete")
 
     # ------------------------------------------------------------------
-    # Slot
+    # Slots
     # ------------------------------------------------------------------
 
     def _on_toggle(self, checked: bool):
-        """Mostra/nasconde il pannello principale."""
+        """Show/hide the main panel."""
         if checked:
             self._ensure_main_dock()
             self._main_dock.show()
@@ -108,7 +108,7 @@ class KadasSillagesPlugin:
     # ------------------------------------------------------------------
 
     def _ensure_main_dock(self):
-        """Crea il DockWidget principale la prima volta che viene richiesto (lazy init)."""
+        """Create the main DockWidget the first time it is requested (lazy init)."""
         if self._main_dock is not None:
             return
 

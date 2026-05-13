@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Logging centralizzato per il plugin KadasSillages."""
+"""Centralised logging for the KadasSillages plugin."""
 import logging
 
 

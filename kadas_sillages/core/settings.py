@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Gestione persistente delle impostazioni del plugin tramite QgsSettings.
-Tutte le chiavi sono raggruppate sotto il prefisso 'kadas_sillages/'.
+Persistent plugin settings backed by QgsSettings.
+All keys are grouped under the 'kadas_sillages/' prefix.
 """
 from __future__ import annotations
 from typing import Optional
@@ -12,10 +12,10 @@ _PREFIX = "kadas_sillages"
 
 
 class PluginSettings:
-    """Wrapper tipizzato attorno a QgsSettings per il plugin KadasSillages."""
+    """Typed wrapper around QgsSettings for the KadasSillages plugin."""
 
     # ------------------------------------------------------------------
-    # Server / autenticazione
+    # Server / authentication
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -37,8 +37,8 @@ class PluginSettings:
     @staticmethod
     def password() -> str:
         """
-        La password è salvata in chiaro in QgsSettings (cifrata dal keystore Qt
-        se disponibile). Per produzione considerare QgsAuthManager.
+        Password stored in plain text in QgsSettings (encrypted by the Qt
+        keystore when available). Consider QgsAuthManager for production.
         """
         return QgsSettings().value(f"{_PREFIX}/password", "", type=str)
 
@@ -47,12 +47,12 @@ class PluginSettings:
         QgsSettings().setValue(f"{_PREFIX}/password", value)
 
     # ------------------------------------------------------------------
-    # Comportamento
+    # Behaviour
     # ------------------------------------------------------------------
 
     @staticmethod
     def auto_connect() -> bool:
-        """Riconnette automaticamente all'avvio del plugin se True."""
+        """Automatically reconnect on plugin load when True."""
         return QgsSettings().value(f"{_PREFIX}/auto_connect", False, type=bool)
 
     @staticmethod
@@ -84,18 +84,18 @@ class PluginSettings:
         QgsSettings().setValue(f"{_PREFIX}/default_track_max_points", value)
 
     # ------------------------------------------------------------------
-    # Utilità
+    # Utilities
     # ------------------------------------------------------------------
 
     @staticmethod
     def is_configured() -> bool:
-        """Ritorna True se URL e credenziali sono stati impostati."""
+        """Return True if URL and credentials have been set."""
         s = PluginSettings
         return bool(s.server_url() and s.username() and s.password())
 
     @staticmethod
     def clear() -> None:
-        """Rimuove tutte le impostazioni del plugin."""
+        """Remove all plugin settings."""
         qs = QgsSettings()
         qs.beginGroup(_PREFIX)
         qs.remove("")

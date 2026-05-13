@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-MapLayerManager: gestisce i layer vettoriali in-memory per posizioni e tracce.
+MapLayerManager: manages in-memory vector layers for positions and tracks.
 
-Struttura layer:
-  • "Sillages – Posizioni"  → QgsVectorLayer Point   (una feature per device)
-  • "Sillages – Tracce"     → QgsVectorLayer LineString (una feature per device)
+Layer structure:
+  • "Sillages – Positions"  → QgsVectorLayer Point   (one feature per device)
+  • "Sillages – Tracks"     → QgsVectorLayer LineString (one feature per device)
 
-Entrambi i layer vengono aggiunti al progetto QGIS/KADAS corrente e rimossi
-automaticamente quando il tracking si ferma o il plugin viene scaricato.
+Both layers are added to the current QGIS/KADAS project and removed
+automatically when tracking stops or the plugin is unloaded.
 """
 from __future__ import annotations
 
@@ -30,14 +30,14 @@ log = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Nomi layer
+# Layer names
 # ---------------------------------------------------------------------------
-LAYER_NAME_POSITIONS = "Sillages – Posizioni"
-LAYER_NAME_TRACKS    = "Sillages – Tracce"
+LAYER_NAME_POSITIONS = "Sillages – Positions"
+LAYER_NAME_TRACKS    = "Sillages – Tracks"
 
 # ---------------------------------------------------------------------------
-# Campi attributo — definiti come tuple (nome, tipo_uri)
-# I tipi URI sono quelli accettati dal provider "memory" di QGIS/KADAS:
+# Attribute fields — defined as (name, uri_type) tuples.
+# URI types accepted by the QGIS/KADAS "memory" provider:
 #   integer, double, string, date, datetime
 # ---------------------------------------------------------------------------
 FIELDS_POS = [
@@ -51,7 +51,7 @@ FIELDS_POS = [
     ("address",   "string(300)"),
 ]
 
-# Campi layer Tracce
+# Track layer fields
 FIELDS_TRK = [
     ("device_id", "integer"),
     ("name",      "string(200)"),
@@ -61,13 +61,13 @@ FIELDS_TRK = [
 
 class MapLayerManager:
     """
-    Crea, aggiorna e rimuove i layer in-memory per il live tracking.
+    Creates, updates and removes in-memory layers for live tracking.
 
-    Ciclo di vita:
+    Lifecycle:
         mgr = MapLayerManager()
-        mgr.create_layers()          # aggiunge layer al progetto
-        mgr.update_position(device, position)   # aggiorna geometria/attributi
-        mgr.remove_layers()          # rimuove dal progetto
+        mgr.create_layers()          # adds layers to the project
+        mgr.update_position(device, position)   # updates geometry/attributes
+        mgr.remove_layers()          # removes from the project
     """
 
     def __init__(self):
@@ -81,7 +81,7 @@ class MapLayerManager:
         # device_id → deque di QgsPointXY (buffer traccia)
         self._track_buffer: Dict[int, deque] = {}
 
-        # Timer per throttle del repaint (max 1 volta / secondo)
+        # Timer for repaint throttling (max once per second)
         self._repaint_timer = QTimer()
         self._repaint_timer.setSingleShot(True)
         self._repaint_timer.setInterval(800)   # ms
@@ -90,13 +90,13 @@ class MapLayerManager:
         self._repaint_pending_trk = False
 
     # ------------------------------------------------------------------
-    # Ciclo di vita layer
+    # Layer lifecycle
     # ------------------------------------------------------------------
 
     def create_layers(self) -> None:
-        """Crea i layer in-memory e li aggiunge al progetto corrente."""
+        """Create in-memory layers and add them to the current project."""
         if self._layer_pos is not None:
-            log.debug("Layer già presenti, skip create_layers")
+            log.debug("Layers already exist, skipping create_layers")
             return
 
         self._layer_pos = self._make_layer(
@@ -108,10 +108,10 @@ class MapLayerManager:
 
         QgsProject.instance().addMapLayer(self._layer_trk)
         QgsProject.instance().addMapLayer(self._layer_pos)
-        log.info("Layer Sillages creati e aggiunti al progetto")
+        log.info("Sillages layers created and added to project")
 
     def remove_layers(self) -> None:
-        """Rimuove i layer dal progetto e libera memoria."""
+        """Remove layers from the project and free memory."""
         self._repaint_timer.stop()
         proj = QgsProject.instance()
         for lyr in (self._layer_pos, self._layer_trk):
@@ -125,20 +125,20 @@ class MapLayerManager:
         self._pos_fid.clear()
         self._trk_fid.clear()
         self._track_buffer.clear()
-        log.info("Layer Sillages rimossi dal progetto")
+        log.info("Sillages layers removed from project")
 
     @property
     def layers_exist(self) -> bool:
         return self._layer_pos is not None and self._layer_trk is not None
 
     # ------------------------------------------------------------------
-    # Aggiornamento posizioni
+    # Position updates
     # ------------------------------------------------------------------
 
     def update_position(self, device: Device, position: Position) -> None:
         """
-        Aggiorna (o crea) la feature del dispositivo nei layer posizioni e tracce.
-        Chiamato ad ogni messaggio WebSocket con una nuova posizione.
+        Update (or create) the device feature in the position and track layers.
+        Called on every WebSocket message with a new position.
         """
         if not self.layers_exist:
             return
@@ -161,9 +161,9 @@ class MapLayerManager:
 
     def initialize_device(self, device: Device) -> None:
         """
-        Crea feature vuote per un device che non ha ancora posizione live.
-        Garantisce che il device sia presente nella lista anche prima del
-        primo aggiornamento WebSocket.
+        Create empty features for a device that has no live position yet.
+        Ensures the device appears in the list even before the first
+        WebSocket update.
         """
         if not self.layers_exist:
             return
@@ -173,7 +173,7 @@ class MapLayerManager:
             self._create_trk_feature(device)
 
     # ------------------------------------------------------------------
-    # Helpers layer posizioni
+    # Position layer helpers
     # ------------------------------------------------------------------
 
     def _update_position_layer(
@@ -244,7 +244,7 @@ class MapLayerManager:
             self._pos_fid[device.id] = added[0].id()
 
     # ------------------------------------------------------------------
-    # Helpers layer tracce
+    # Track layer helpers
     # ------------------------------------------------------------------
 
     def _update_track_layer(
@@ -303,11 +303,11 @@ class MapLayerManager:
             self._trk_fid[device.id] = added[0].id()
 
     # ------------------------------------------------------------------
-    # Throttle repaint
+    # Repaint throttle
     # ------------------------------------------------------------------
 
     def _do_repaint(self) -> None:
-        """Esegue triggerRepaint sui layer che hanno aggiornamenti pendenti."""
+        """Trigger repaint on layers that have pending updates."""
         if self._repaint_pending_pos and self._layer_pos is not None:
             self._layer_pos.triggerRepaint()
             self._repaint_pending_pos = False
@@ -316,7 +316,7 @@ class MapLayerManager:
             self._repaint_pending_trk = False
 
     # ------------------------------------------------------------------
-    # Factory layer
+    # Layer factory
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -326,13 +326,13 @@ class MapLayerManager:
         field_defs: list,
     ) -> QgsVectorLayer:
         """
-        Crea un layer memory definendo i campi direttamente nell'URI.
-        Evita QgsField/QVariant (deprecati in KADAS Albireo 2).
-        URI format: "Point?crs=EPSG:4326&field=nome:tipo&..."
+        Create a memory layer by specifying fields directly in the URI.
+        Avoids QgsField/QVariant (deprecated in KADAS Albireo 2).
+        URI format: "Point?crs=EPSG:4326&field=name:type&..."
         """
         field_parts = "&".join(f"field={fname}:{ftype}" for fname, ftype in field_defs)
         uri = f"{geom_type}?crs=EPSG:4326&{field_parts}"
         lyr = QgsVectorLayer(uri, name, "memory")
         if not lyr.isValid():
-            raise RuntimeError(f"Impossibile creare il layer '{name}' (uri={uri})")
+            raise RuntimeError(f"Unable to create layer '{name}' (uri={uri})")
         return lyr

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Exporter: scarica le posizioni storiche da Traccar e le aggiunge al progetto
-come layer vettoriale permanente oppure le salva su file (GeoJSON, GPX, CSV).
+Exporter: downloads historic positions from Traccar and adds them to the project
+as a permanent vector layer or saves them to file (GeoJSON, GPX, CSV).
 
-Flusso:
+Flow:
     exp = Exporter(client)
-    exp.export_to_layer(device, from_dt, to_dt)          # → QgsVectorLayer nel progetto
-    exp.export_to_file(device, from_dt, to_dt, path, fmt) # → file su disco
+    exp.export_to_layer(device, from_dt, to_dt)          # → QgsVectorLayer in the project
+    exp.export_to_file(device, from_dt, to_dt, path, fmt) # → file on disk
 """
 from __future__ import annotations
 
@@ -35,30 +35,30 @@ from ..logger import get_logger
 
 log = get_logger(__name__)
 
-# Campi del layer esportato
+# Fields of the exported layer
 _EXPORT_FIELDS = [
-    ("device_id",  QVariant.Int,    "ID dispositivo"),
-    ("device_name",QVariant.String, "Nome dispositivo"),
-    ("fix_time",   QVariant.String, "Ora fix GPS (UTC)"),
-    ("latitude",   QVariant.Double, "Latitudine"),
-    ("longitude",  QVariant.Double, "Longitudine"),
-    ("altitude",   QVariant.Double, "Quota (m)"),
-    ("speed_kn",   QVariant.Double, "Velocità (nodi)"),
-    ("speed_kmh",  QVariant.Double, "Velocità (km/h)"),
-    ("course",     QVariant.Double, "Direzione (°)"),
-    ("address",    QVariant.String, "Indirizzo"),
-    ("valid",      QVariant.Int,    "Fix valido (0/1)"),
+    ("device_id",  QVariant.Int,    "Device ID"),
+    ("device_name",QVariant.String, "Device name"),
+    ("fix_time",   QVariant.String, "GPS fix time (UTC)"),
+    ("latitude",   QVariant.Double, "Latitude"),
+    ("longitude",  QVariant.Double, "Longitude"),
+    ("altitude",   QVariant.Double, "Altitude (m)"),
+    ("speed_kn",   QVariant.Double, "Speed (knots)"),
+    ("speed_kmh",  QVariant.Double, "Speed (km/h)"),
+    ("course",     QVariant.Double, "Heading (°)"),
+    ("address",    QVariant.String, "Address"),
+    ("valid",      QVariant.Int,    "Valid fix (0/1)"),
 ]
 
 
 class Exporter:
-    """Scarica e converte posizioni storiche Traccar."""
+    """Downloads and converts historic Traccar positions."""
 
     def __init__(self, client: TraccarClient):
         self._client = client
 
     # ------------------------------------------------------------------
-    # Export come layer nel progetto KADAS
+    # Export as a layer in the KADAS project
     # ------------------------------------------------------------------
 
     def export_to_layer(
@@ -69,20 +69,20 @@ class Exporter:
         as_track: bool = True,
     ) -> Optional[QgsVectorLayer]:
         """
-        Scarica le posizioni storiche e le aggiunge al progetto come:
-          • as_track=True  → LineString (traccia)
-          • as_track=False → MultiPoint (punti separati con tutti gli attributi)
+        Download historic positions and add them to the project as:
+          • as_track=True  → LineString (track)
+          • as_track=False → MultiPoint (individual points with all attributes)
 
         Returns:
-            QgsVectorLayer aggiunto al progetto, o None in caso di errore.
+            QgsVectorLayer added to the project, or None on error.
         """
         positions = self._fetch(device, from_dt, to_dt)
         if not positions:
-            log.warning("Nessuna posizione trovata per %s nel range richiesto", device.name)
+            log.warning("No positions found for %s in the requested range", device.name)
             return None
 
         layer_name = (
-            f"{device.name} – traccia "
+            f"{device.name} – track "
             f"{from_dt.strftime('%Y%m%d')}–{to_dt.strftime('%Y%m%d')}"
         )
 
@@ -93,13 +93,13 @@ class Exporter:
 
         QgsProject.instance().addMapLayer(lyr)
         log.info(
-            "Esportati %d punti per device '%s' → layer '%s'",
+            "Exported %d points for device '%s' → layer '%s'",
             len(positions), device.name, layer_name,
         )
         return lyr
 
     # ------------------------------------------------------------------
-    # Export su file
+    # Export to file
     # ------------------------------------------------------------------
 
     def export_to_file(
@@ -111,17 +111,17 @@ class Exporter:
         file_format: str = "geojson",
     ) -> bool:
         """
-        Salva su file le posizioni storiche.
+        Save historic positions to file.
 
         Args:
             file_format: "geojson" | "gpx" | "csv"
 
         Returns:
-            True se l'esportazione è riuscita.
+            True if export succeeded.
         """
         positions = self._fetch(device, from_dt, to_dt)
         if not positions:
-            log.warning("Nessuna posizione da esportare per %s", device.name)
+            log.warning("No positions to export for %s", device.name)
             return False
 
         fmt = file_format.lower()
@@ -133,14 +133,14 @@ class Exporter:
             elif fmt == "csv":
                 return self._write_csv(file_path, device, positions)
             else:
-                log.error("Formato non supportato: %s", file_format)
+                log.error("Unsupported format: %s", file_format)
                 return False
         except Exception as exc:
-            log.error("Errore durante l'esportazione su file: %s", exc)
+            log.error("Error during file export: %s", exc)
             return False
 
     # ------------------------------------------------------------------
-    # Fetch posizioni
+    # Fetch positions
     # ------------------------------------------------------------------
 
     def _fetch(
@@ -149,15 +149,15 @@ class Exporter:
         try:
             positions = self._client.get_route(device.id, from_dt, to_dt)
             if not positions:
-                # Fallback a get_positions se route non restituisce nulla
+                # Fallback to get_positions if route returns nothing
                 positions = self._client.get_positions(device.id, from_dt, to_dt)
             return positions
         except TraccarError as exc:
-            log.error("Errore fetch posizioni storiche: %s", exc)
+            log.error("Error fetching historic positions: %s", exc)
             return []
 
     # ------------------------------------------------------------------
-    # Build layer QGIS
+    # Build QGIS layers
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -165,7 +165,7 @@ class Exporter:
         uri = f"{geom_type}?crs=EPSG:4326"
         lyr = QgsVectorLayer(uri, name, "memory")
         if not lyr.isValid():
-            raise RuntimeError(f"Impossibile creare layer '{name}'")
+            raise RuntimeError(f"Unable to create layer '{name}'")
         pr = lyr.dataProvider()
         pr.addAttributes([QgsField(fn, ft) for fn, ft, _ in _EXPORT_FIELDS])
         lyr.updateFields()
@@ -177,7 +177,7 @@ class Exporter:
         lyr = self._make_base_layer("LineString", name)
         valid = [p for p in positions if p.valid]
         if len(valid) < 2:
-            valid = positions  # usa tutti se non ci sono abbastanza valid
+            valid = positions  # use all if not enough valid
 
         pts = [QgsPointXY(p.longitude, p.latitude) for p in valid]
         geom = QgsGeometry.fromPolylineXY(pts)
@@ -225,7 +225,7 @@ class Exporter:
         return lyr
 
     # ------------------------------------------------------------------
-    # Scrittura file
+    # File writers
     # ------------------------------------------------------------------
 
     def _write_geojson(
@@ -256,7 +256,7 @@ class Exporter:
             })
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(fc, fh, ensure_ascii=False, indent=2)
-        log.info("GeoJSON scritto: %s (%d features)", path, len(fc["features"]))
+        log.info("GeoJSON written: %s (%d features)", path, len(fc["features"]))
         return True
 
     def _write_gpx(
@@ -280,7 +280,7 @@ class Exporter:
         lines += ["  </trkseg></trk>", "</gpx>"]
         with open(path, "w", encoding="utf-8") as fh:
             fh.write("\n".join(lines))
-        log.info("GPX scritto: %s (%d trackpoints)", path, len(positions))
+        log.info("GPX written: %s (%d trackpoints)", path, len(positions))
         return True
 
     def _write_csv(
@@ -308,7 +308,7 @@ class Exporter:
                     "address":     pos.address or "",
                     "valid":       1 if pos.valid else 0,
                 })
-        log.info("CSV scritto: %s (%d righe)", path, len(positions))
+        log.info("CSV written: %s (%d rows)", path, len(positions))
         return True
 
 

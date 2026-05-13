@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Client HTTP sincrono per le REST API di Traccar v6.
-Usa QgsNetworkAccessManager per ereditare proxy/VPN di KADAS.
+Synchronous HTTP client for the Traccar v6 REST API.
+Uses QgsNetworkAccessManager to inherit KADAS proxy/VPN settings.
 
-Pattern utilizzo:
+Usage pattern:
     client = TraccarClient("https://host", "user@mail.com", "pass")
-    client.login()                          # → lancia TraccarAuthError se fallisce
+    client.login()                          # raises TraccarAuthError on failure
     devices = client.get_devices()          # → List[Device]
     positions = client.get_positions()      # → List[Position]
     client.logout()
@@ -33,19 +33,19 @@ log = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Eccezioni
+# Exceptions
 # ---------------------------------------------------------------------------
 
 class TraccarError(Exception):
-    """Errore generico del client Traccar."""
+    """Generic Traccar client error."""
 
 
 class TraccarAuthError(TraccarError):
-    """Credenziali non valide o sessione scaduta."""
+    """Invalid credentials or expired session."""
 
 
 class TraccarNetworkError(TraccarError):
-    """Errore di rete (timeout, SSL, proxy, …)."""
+    """Network error (timeout, SSL, proxy, …)."""
 
 
 # ---------------------------------------------------------------------------
@@ -54,11 +54,11 @@ class TraccarNetworkError(TraccarError):
 
 class TraccarClient:
     """
-    Gestisce autenticazione e chiamate REST all'API Traccar.
+    Handles authentication and REST API calls for Traccar.
 
-    Tutte le richieste sono sincrone (blocca su QEventLoop) per semplicità
-    d'integrazione con il codice PyQGIS. Le operazioni lente (es. storico
-    tracce lungo) vengono eseguite in thread separato lato chiamante.
+    All requests are synchronous (blocks on QEventLoop) for simplicity of
+    integration with PyQGIS code. Slow operations (e.g. long historic
+    tracks) should be run in a worker thread by the caller.
     """
 
     DEFAULT_TIMEOUT_MS = 15_000   # 15 secondi
@@ -68,9 +68,9 @@ class TraccarClient:
         self.username = username
         self.password = password
 
-        # NAM privato: NON toccare mai il NAM globale di KADAS/QGIS.
-        # Copiamo proxy statico E proxy factory dal NAM globale per
-        # ereditare la configurazione VPN/PAC di KADAS.
+        # Private NAM: NEVER touch the global KADAS/QGIS NAM.
+        # Copy both the static proxy and the proxy factory from the global NAM
+        # to inherit KADAS VPN/PAC configuration.
         self._cookie_jar = QNetworkCookieJar()
         self._nam = QNetworkAccessManager()
         self._nam.setCookieJar(self._cookie_jar)
@@ -81,27 +81,27 @@ class TraccarClient:
     @staticmethod
     def _apply_kadas_proxy(nam: "QNetworkAccessManager") -> None:
         """
-        Copia sul NAM fornito sia il proxy statico sia il proxy factory
-        del QgsNetworkAccessManager globale di KADAS.
+        Copy both the static proxy and the proxy factory from the global
+        QgsNetworkAccessManager onto the provided NAM.
         """
         try:
             from qgis.core import QgsNetworkAccessManager
             qgis_nam = QgsNetworkAccessManager.instance()
-            # Proxy factory (VPN, PAC, proxy per-host)
+            # Proxy factory (VPN, PAC, per-host proxy)
             factory = qgis_nam.proxyFactory()
             if factory is not None:
                 nam.setProxyFactory(factory)
             else:
-                # Proxy statico di fallback
+                # Static fallback proxy
                 nam.setProxy(qgis_nam.proxy())
         except Exception as exc:
-            log.debug("Impossibile copiare configurazione proxy da KADAS: %s", exc)
+            log.debug("Unable to copy proxy configuration from KADAS: %s", exc)
 
     def get_proxy(self):
         """
-        Restituisce il QNetworkProxy da usare per il WebSocket.
-        Interroga il proxy factory (se disponibile) per l'URL del server,
-        altrimenti restituisce il proxy statico del NAM privato.
+        Return the QNetworkProxy to use for the WebSocket.
+        Queries the proxy factory (when available) for the server URL,
+        otherwise returns the static proxy from the private NAM.
         """
         from qgis.PyQt.QtNetwork import QNetworkProxy, QNetworkProxyQuery
         factory = self._nam.proxyFactory()
@@ -117,21 +117,21 @@ class TraccarClient:
         return self._nam.proxy()
 
     # ------------------------------------------------------------------
-    # Autenticazione
+    # Authentication
     # ------------------------------------------------------------------
 
     def login(self) -> dict:
         """
-        Esegue POST /api/session con form-urlencoded.
-        Traccar imposta un cookie di sessione che viene conservato nel
-        cookie jar per le chiamate successive.
+        POST /api/session with form-urlencoded body.
+        Traccar sets a session cookie that is kept in the cookie jar for
+        subsequent calls.
 
         Returns:
-            dict con i dati dell'utente loggato.
+            dict with the logged-in user data.
 
         Raises:
-            TraccarAuthError: credenziali errate (HTTP 401/403).
-            TraccarNetworkError: problemi di rete.
+            TraccarAuthError: wrong credentials (HTTP 401/403).
+            TraccarNetworkError: network issues.
         """
         url = f"{self.server_url}/api/session"
         body = QUrlQuery()
@@ -149,11 +149,11 @@ class TraccarClient:
         data = self._parse_reply(reply, expect_auth=True)
 
         self._logged_in = True
-        log.info("Login riuscito: utente=%s id=%s", data.get("name"), data.get("id"))
+        log.info("Login successful: user=%s id=%s", data.get("name"), data.get("id"))
         return data
 
     def logout(self) -> None:
-        """Esegue DELETE /api/session e invalida il cookie locale."""
+        """Issue DELETE /api/session and invalidate the local cookie."""
         if not self._logged_in:
             return
         url = f"{self.server_url}/api/session"
@@ -166,20 +166,20 @@ class TraccarClient:
         finally:
             self._logged_in = False
             self._cookie_jar.setAllCookies([])
-            log.info("Logout effettuato")
+            log.info("Logout successful")
 
     def verify_session(self) -> dict:
-        """GET /api/session — verifica che la sessione sia ancora attiva."""
+        """GET /api/session — verify that the session is still active."""
         return self._get_json("/api/session")
 
     @property
     def session_cookie_header(self) -> str:
         """
-        Restituisce il valore dell'header ``Cookie`` per la sessione corrente.
+        Return the ``Cookie`` header value for the current session.
 
-        Necessario per autenticare il WebSocket, che in Qt5 non condivide
-        automaticamente i cookie con QNetworkAccessManager.
-        Formato: "JSESSIONID=xxxx; ..."
+        Required to authenticate the WebSocket, which in Qt5 does not
+        automatically share cookies with QNetworkAccessManager.
+        Format: "JSESSIONID=xxxx; ..."
         """
         from qgis.PyQt.QtCore import QUrl as _QUrl
         cookies = self._cookie_jar.cookiesForUrl(
@@ -194,7 +194,7 @@ class TraccarClient:
         )
 
     # ------------------------------------------------------------------
-    # Dispositivi
+    # Devices
     # ------------------------------------------------------------------
 
     def get_devices(self, all_devices: bool = True) -> List[Device]:
@@ -202,19 +202,19 @@ class TraccarClient:
         GET /api/devices
 
         Args:
-            all_devices: se True aggiunge ?all=true (richiede permessi admin).
+            all_devices: if True appends ?all=true (requires admin permissions).
 
         Returns:
-            Lista di Device.
+            List of Device.
         """
         params = {"all": "true"} if all_devices else {}
         data = self._get_json("/api/devices", params=params)
         devices = [Device.from_dict(d) for d in data]
-        log.debug("Ricevuti %d dispositivi", len(devices))
+        log.debug("Received %d devices", len(devices))
         return devices
 
     # ------------------------------------------------------------------
-    # Posizioni
+    # Positions
     # ------------------------------------------------------------------
 
     def get_positions(
@@ -226,11 +226,11 @@ class TraccarClient:
         """
         GET /api/positions
 
-        Senza parametri: ultime posizioni note di tutti i dispositivi.
-        Con device_id + from_dt + to_dt: storico posizioni del dispositivo.
+        Without parameters: last known positions for all devices.
+        With device_id + from_dt + to_dt: historic positions for a device.
 
         Returns:
-            Lista di Position.
+            List of Position.
         """
         params: dict = {}
         if device_id is not None:
@@ -242,7 +242,7 @@ class TraccarClient:
 
         data = self._get_json("/api/positions", params=params)
         positions = [Position.from_dict(p) for p in data]
-        log.debug("Ricevute %d posizioni", len(positions))
+        log.debug("Received %d positions", len(positions))
         return positions
 
     def get_route(
@@ -252,8 +252,8 @@ class TraccarClient:
         to_dt: datetime,
     ) -> List[Position]:
         """
-        GET /api/reports/route — traccia completa per report.
-        Include punti interpolati rispetto a get_positions.
+        GET /api/reports/route — full track for reports.
+        Includes interpolated points compared to get_positions.
         """
         params = {
             "deviceId": str(device_id),
@@ -268,29 +268,29 @@ class TraccarClient:
     # ------------------------------------------------------------------
 
     def get_server_info(self) -> dict:
-        """GET /api/server — non richiede autenticazione."""
+        """GET /api/server — does not require authentication."""
         return self._get_json("/api/server")
 
     def get_server_time_offset(self) -> float:
         """
-        Misura la differenza di orologio tra client e server.
+        Measure the clock difference between client and server.
 
-        Esegue GET /api/server e legge l'header HTTP ``Date`` della risposta
-        (standard RFC 7231, sempre presente in Traccar).
-        Il valore restituito è:
+        Issues GET /api/server and reads the ``Date`` HTTP response header
+        (RFC 7231 standard, always present in Traccar).
+        The returned value is:
 
-            offset = t_server - t_client  (secondi, float)
+            offset = t_server - t_client  (seconds, float)
 
-        • offset > 0  → il server è *avanti* rispetto al client
-        • offset < 0  → il server è *indietro* rispetto al client
-        • |offset| < 2  → differenza trascurabile
+        • offset > 0  → server clock is *ahead* of client
+        • offset < 0  → server clock is *behind* client
+        • |offset| < 2  → negligible difference
 
-        Il metodo contabilizza la metà del Round-Trip-Time (RTT) per
-        aumentare la precisione della stima (algoritmo NTP semplificato).
+        Accounts for half the Round-Trip-Time (RTT) to improve accuracy
+        (simplified NTP algorithm).
 
         Raises:
-            TraccarNetworkError: errore di rete.
-            TraccarError: header Date mancante o non parsabile.
+            TraccarNetworkError: network error.
+            TraccarError: missing or unparseable Date header.
         """
         url = f"{self.server_url}/api/server"
         request = self._build_request(url)
@@ -299,26 +299,26 @@ class TraccarClient:
         reply = self._exec_sync(self._nam.get(request))
         t_recv = datetime.now(timezone.utc)
 
-        # Leggi l'header Date dalla risposta HTTP
+        # Read the Date header from the HTTP response
         date_header = bytes(reply.rawHeader(b"Date")).decode(errors="replace").strip()
-        # Rilascia la reply (parsare prima del deleteLater)
+        # Release the reply (parse before deleteLater)
         reply.deleteLater()
 
         if not date_header:
             raise TraccarError(
-                "Header 'Date' assente nella risposta del server. "
-                "Impossible determinare l'orario del server."
+                "'Date' header missing from server response. "
+                "Unable to determine server time."
             )
 
         try:
             t_server = parsedate_to_datetime(date_header)
         except Exception as exc:
             raise TraccarError(
-                f"Header 'Date' non parsabile: '{date_header}': {exc}"
+                f"Unparseable 'Date' header: '{date_header}': {exc}"
             ) from exc
 
-        # Stima del momento in cui il server ha lavorato la richiesta:
-        # punto medio del viaggio andata-ritorno
+        # Estimate the moment the server processed the request:
+        # midpoint of the round trip
         rtt = (t_recv - t_send).total_seconds()
         t_client_mid = t_send + (t_recv - t_send) / 2
 
@@ -330,7 +330,7 @@ class TraccarClient:
         return offset
 
     # ------------------------------------------------------------------
-    # Helpers interni
+    # Internal helpers
     # ------------------------------------------------------------------
 
     def _get_json(self, path: str, params: Optional[dict] = None):
@@ -358,7 +358,7 @@ class TraccarClient:
 
     @staticmethod
     def _exec_sync(reply: QNetworkReply) -> QNetworkReply:
-        """Blocca finché la risposta non è completa usando un QEventLoop."""
+        """Block until the reply is complete using a QEventLoop."""
         if not reply.isFinished():
             loop = QEventLoop()
             reply.finished.connect(loop.quit)
@@ -371,12 +371,12 @@ class TraccarClient:
         expect_auth: bool = False,
     ):
         """
-        Legge e decodifica la risposta.
+        Read and decode the response.
 
         Raises:
             TraccarAuthError: HTTP 401/403.
-            TraccarNetworkError: errore di rete Qt.
-            TraccarError: altri errori HTTP.
+            TraccarNetworkError: Qt network error.
+            TraccarError: other HTTP errors.
         """
         net_err = reply.error()
         if net_err not in (
@@ -385,7 +385,7 @@ class TraccarClient:
         ):
             msg = reply.errorString()
             reply.deleteLater()
-            raise TraccarNetworkError(f"Errore di rete: {msg}")
+            raise TraccarNetworkError(f"Network error: {msg}")
 
         http_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
         raw = bytes(reply.readAll())
@@ -401,7 +401,7 @@ class TraccarClient:
 
         if http_code in (401, 403):
             raise TraccarAuthError(
-                f"Credenziali non valide o accesso negato (HTTP {http_code})"
+                f"Invalid credentials or access denied (HTTP {http_code})"
             )
 
         if http_code and http_code >= 400:
@@ -409,7 +409,7 @@ class TraccarClient:
                 detail = json.loads(raw).get("message", raw.decode(errors="replace"))
             except Exception:
                 detail = raw.decode(errors="replace")
-            raise TraccarError(f"Errore server HTTP {http_code}: {detail}")
+            raise TraccarError(f"Server error HTTP {http_code}: {detail}")
 
         if not raw:
             return {}
@@ -417,4 +417,4 @@ class TraccarClient:
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise TraccarError(f"Risposta non JSON: {exc}") from exc
+            raise TraccarError(f"Non-JSON response: {exc}") from exc

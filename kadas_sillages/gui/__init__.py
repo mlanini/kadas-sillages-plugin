@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-"""Pacchetto gui: DockWidget principale e dialogs del plugin."""
+"""gui package: main DockWidget and plugin dialogs."""

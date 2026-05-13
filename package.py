@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-package.py – Crea un archivio ZIP del plugin pronto per la distribuzione.
+package.py – Creates a distributable ZIP archive of the plugin.
 
-Output: kadas_sillages_<version>.zip nella root del repository.
-Installabile via: KADAS/QGIS → Plugin → Gestisci plugin → Installa da ZIP
+Output: kadas_sillages_<version>.zip in the repository root.
+Installable via: KADAS/QGIS → Plugins → Manage plugins → Install from ZIP
 
-Uso:
+Usage:
     python package.py
     python package.py --output-dir dist/
     python package.py --version 1.2.3
@@ -18,7 +18,7 @@ import sys
 import zipfile
 
 
-# File/cartelle da escludere sempre dall'archivio
+# Files/folders always excluded from the archive
 _EXCLUDE_NAMES = {"__pycache__", ".git", ".gitignore", ".DS_Store"}
 _EXCLUDE_EXTS  = {".pyc", ".pyo", ".zip"}
 
@@ -31,7 +31,7 @@ def read_version(plugin_dir: str) -> str:
 
 
 def set_version(plugin_dir: str, version: str) -> None:
-    """Aggiorna la versione in metadata.txt prima del packaging."""
+    """Update the version in metadata.txt before packaging."""
     meta = os.path.join(plugin_dir, "metadata.txt")
     lines = []
     with open(meta, encoding="utf-8") as fh:
@@ -55,12 +55,12 @@ def should_include(path: str, name: str) -> bool:
 
 def add_dir_to_zip(zf: zipfile.ZipFile, src_dir: str, zip_base: str) -> int:
     """
-    Aggiunge ricorsivamente src_dir a zf sotto zip_base.
-    Ritorna il numero di file aggiunti.
+    Recursively add src_dir to zf under zip_base.
+    Returns the number of files added.
     """
     count = 0
     for root, dirs, files in os.walk(src_dir):
-        # Filtra directory in-place
+        # Filter directories in-place
         dirs[:] = [d for d in dirs if should_include(root, d)]
 
         for filename in files:
@@ -76,18 +76,18 @@ def add_dir_to_zip(zf: zipfile.ZipFile, src_dir: str, zip_base: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Crea il pacchetto ZIP di kadas_sillages per distribuzione."
+        description="Create the ZIP package of kadas_sillages for distribution."
     )
     parser.add_argument(
         "--output-dir",
         default=None,
         dest="output_dir",
-        help="Cartella di output (default: root del repository)",
+        help="Output folder (default: repository root)",
     )
     parser.add_argument(
         "--version",
         default=None,
-        help="Forza una versione specifica (aggiorna anche metadata.txt)",
+        help="Force a specific version (also updates metadata.txt)",
     )
     args = parser.parse_args()
 
@@ -95,13 +95,13 @@ def main() -> int:
     plugin_dir = os.path.join(repo_root, "kadas_sillages")
 
     if not os.path.isdir(plugin_dir):
-        print(f"[ERRORE] Cartella plugin non trovata: {plugin_dir}", file=sys.stderr)
+        print(f"[ERROR] Plugin folder not found: {plugin_dir}", file=sys.stderr)
         return 1
 
-    # Aggiorna versione se richiesta
+    # Update version if requested
     if args.version:
         set_version(plugin_dir, args.version)
-        print(f"metadata.txt aggiornato → version={args.version}")
+        print(f"metadata.txt updated → version={args.version}")
 
     version    = read_version(plugin_dir)
     output_dir = args.output_dir or repo_root
@@ -112,21 +112,21 @@ def main() -> int:
 
     print()
     print("=== KadasSillages – Package ===")
-    print(f"  Versione : {version}")
-    print(f"  Output   : {zip_path}")
+    print(f"  Version : {version}")
+    print(f"  Output  : {zip_path}")
 
-    # Rimuovi zip precedente con stessa versione
+    # Remove previous ZIP with the same version
     if os.path.isfile(zip_path):
         os.remove(zip_path)
-        print("  (zip precedente rimosso)")
+        print("  (previous zip removed)")
 
-    # Crea archivio
+    # Create archive
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         n_files = add_dir_to_zip(zf, plugin_dir, zip_base="")
 
     size_kb = round(os.path.getsize(zip_path) / 1024, 1)
-    print(f"\n✓ Archivio creato: {zip_name}  ({size_kb} KB, {n_files} file)")
-    print(f"  Installabile via: KADAS → Plugin → Gestisci plugin → Installa da ZIP")
+    print(f"\n✓ Archive created: {zip_name}  ({size_kb} KB, {n_files} files)")
+    print(f"  Install via: KADAS → Plugins → Manage plugins → Install from ZIP")
     print()
     return 0
 

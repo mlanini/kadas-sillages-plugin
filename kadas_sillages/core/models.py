@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Modelli dati per i dispositivi e le posizioni Traccar.
-Semplici dataclass che rispecchiano lo schema OpenAPI di Traccar v6.
+Data models for Traccar devices and positions.
+Simple dataclasses mirroring the Traccar v6 OpenAPI schema.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 @dataclass
 class Device:
-    """Rappresentazione di un dispositivo Traccar (GET /api/devices)."""
+    """Representation of a Traccar device (GET /api/devices)."""
     id: int
     name: str
     unique_id: str
@@ -23,12 +23,12 @@ class Device:
     category: Optional[str] = None
     attributes: Dict[str, Any] = field(default_factory=dict)
 
-    # Opzioni visive (gestite lato plugin, non da Traccar)
+    # Visual options (managed plugin-side, not by Traccar)
     visible: bool = True
-    icon_path: Optional[str] = None      # path assoluto a un'icona SVG/PNG
-    track_color: str = "#0000FF"         # colore hex
-    track_width: int = 2                 # pixel
-    track_max_points: int = 100          # numero massimo di punti nella traccia
+    icon_path: Optional[str] = None      # absolute path to an SVG/PNG icon
+    track_color: str = "#0000FF"         # hex colour
+    track_width: int = 2                 # pixels
+    track_max_points: int = 100          # maximum number of points in the track
     show_label: bool = True
 
     @staticmethod
@@ -49,7 +49,7 @@ class Device:
 
 @dataclass
 class Position:
-    """Rappresentazione di una posizione Traccar (GET /api/positions o WebSocket)."""
+    """Representation of a Traccar position (GET /api/positions or WebSocket)."""
     id: int
     device_id: int
     device_time: Optional[datetime]
@@ -59,8 +59,8 @@ class Position:
     latitude: float
     longitude: float
     altitude: float = 0.0
-    speed: float = 0.0          # nodi
-    course: float = 0.0         # gradi 0-360
+    speed: float = 0.0          # knots
+    course: float = 0.0         # degrees 0-360
     address: Optional[str] = None
     accuracy: float = 0.0
     attributes: Dict[str, Any] = field(default_factory=dict)

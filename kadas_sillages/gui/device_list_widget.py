@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-DeviceListWidget: widget che mostra la lista dei dispositivi Traccar
-con indicatore di stato, controllo visibilità e accesso rapido alle opzioni
-di stile.
+DeviceListWidget: widget showing the list of Traccar devices with a status
+indicator, visibility control and quick access to style options.
 
-Ogni riga mostra:
-  [●] [vis] NomeDevice   [stato]   [⚙ Stile] [✕ Traccia]
+Each row displays:
+  [●] [vis] DeviceName   [status]   [⚙ Style] [⌫ Track]
 
-Colori stato:
-  ● verde  → online
-  ● grigio → offline / unknown
+Status colours:
+  ● green  → online
+  ● grey   → offline / unknown
 """
 from __future__ import annotations
 
@@ -48,7 +47,7 @@ def _status_dot(status: str) -> str:
 
 
 class DeviceRowWidget(QWidget):
-    """Singola riga dispositivo nella lista."""
+    """Single device row in the list."""
 
     # Segnali emessi verso il DeviceListWidget
     visibility_changed = pyqtSignal(int, bool)    # device_id, visible
@@ -79,7 +78,7 @@ class DeviceRowWidget(QWidget):
         # Checkbox visibilità
         self._cb_vis = QCheckBox()
         self._cb_vis.setChecked(self._device.visible)
-        self._cb_vis.setToolTip("Mostra/nascondi sulla mappa")
+        self._cb_vis.setToolTip("Show/hide on the map")
         self._cb_vis.toggled.connect(
             lambda checked: self.visibility_changed.emit(self._device.id, checked)
         )
@@ -105,32 +104,32 @@ class DeviceRowWidget(QWidget):
         self._lbl_status_text.setFixedWidth(52)
         h.addWidget(self._lbl_status_text)
 
-        # Pulsante stile
+        # Style button
         self._btn_style = QToolButton()
         self._btn_style.setText("⚙")
         self._btn_style.setFixedSize(22, 22)
-        self._btn_style.setToolTip("Personalizza stile")
+        self._btn_style.setToolTip("Customise style")
         self._btn_style.clicked.connect(lambda: self.style_requested.emit(self._device.id))
         h.addWidget(self._btn_style)
 
-        # Pulsante cancella traccia
+        # Clear track button
         self._btn_clear = QToolButton()
         self._btn_clear.setText("⌫")
         self._btn_clear.setFixedSize(22, 22)
-        self._btn_clear.setToolTip("Cancella traccia")
+        self._btn_clear.setToolTip("Clear track")
         self._btn_clear.clicked.connect(lambda: self.clear_track.emit(self._device.id))
         h.addWidget(self._btn_clear)
 
-        # Pulsante centra mappa
+        # Centre map button
         self._btn_center = QToolButton()
         self._btn_center.setText("📍")
         self._btn_center.setFixedSize(22, 22)
-        self._btn_center.setToolTip("Centra la mappa su questo dispositivo (1:50 000)")
+        self._btn_center.setToolTip("Centre map on this device (1:50,000)")
         self._btn_center.clicked.connect(lambda: self.center_requested.emit(self._device.id))
         h.addWidget(self._btn_center)
 
     def refresh(self, device: Device):
-        """Aggiorna la riga con lo stato/stile del device."""
+        """Update the row with the current device state/style."""
         self._device = device
         self._lbl_status.setText(_status_dot(device.status))
         self._lbl_status_text.setText(device.status)
@@ -152,15 +151,15 @@ class DeviceRowWidget(QWidget):
 
 class DeviceListWidget(QWidget):
     """
-    Lista scorrevole di DeviceRowWidget.
+    Scrollable list of DeviceRowWidget items.
 
-    Espone segnali che il MainDock può connettere al TrackerManager / MapLayerManager.
+    Exposes signals that MainDock can connect to TrackerManager / MapLayerManager.
     """
 
     visibility_changed = pyqtSignal(int, bool)
-    style_changed      = pyqtSignal(int)       # emesso dopo che l'utente ha salvato il dialog
+    style_changed      = pyqtSignal(int)       # emitted after the user saves the dialog
     track_cleared      = pyqtSignal(int)
-    # lat, lon WGS-84 del device su cui centrare la mappa
+    # lat, lon WGS-84 of the device to centre the map on
     center_on_device   = pyqtSignal(float, float)
 
     def __init__(self, tracker_manager, parent=None):
@@ -182,16 +181,16 @@ class DeviceListWidget(QWidget):
         header = QWidget()
         h_hdr = QHBoxLayout(header)
         h_hdr.setContentsMargins(4, 2, 4, 2)
-        lbl = QLabel("<b>Dispositivi</b>")
+        lbl = QLabel("<b>Devices</b>")
         self._lbl_count = QLabel("(0)")
         self._lbl_count.setStyleSheet("color: gray; font-size: 10px;")
-        btn_all = QPushButton("Tutti ✓")
+        btn_all = QPushButton("All ✓")
         btn_all.setFixedHeight(20)
-        btn_all.setToolTip("Mostra tutti i dispositivi")
+        btn_all.setToolTip("Show all devices")
         btn_all.clicked.connect(self._show_all)
-        btn_none = QPushButton("Nessuno")
+        btn_none = QPushButton("None")
         btn_none.setFixedHeight(20)
-        btn_none.setToolTip("Nascondi tutti i dispositivi")
+        btn_none.setToolTip("Hide all devices")
         btn_none.clicked.connect(self._hide_all)
         h_hdr.addWidget(lbl)
         h_hdr.addWidget(self._lbl_count)
@@ -225,8 +224,8 @@ class DeviceListWidget(QWidget):
     # ------------------------------------------------------------------
 
     def populate(self, devices: List[Device]) -> None:
-        """Rimpiazza l'intera lista con i device forniti."""
-        # Rimuovi righe obsolete
+        """Replace the entire list with the given devices."""
+        # Remove obsolete rows
         old_ids = set(self._rows.keys())
         new_ids = {d.id for d in devices}
         for did in old_ids - new_ids:
@@ -243,7 +242,7 @@ class DeviceListWidget(QWidget):
         self._lbl_count.setText(f"({len(devices)})")
 
     def update_device_status(self, device_id: int, status: str) -> None:
-        """Aggiorna solo il LED di stato di un device."""
+        """Update only the status LED of a device."""
         row = self._rows.get(device_id)
         if row:
             device = row.device
@@ -251,7 +250,7 @@ class DeviceListWidget(QWidget):
             row.refresh(device)
 
     def update_device_style(self, device: Device) -> None:
-        """Aggiorna il swatch colore dopo un cambio di stile."""
+        """Update the colour swatch after a style change."""
         row = self._rows.get(device.id)
         if row:
             row.refresh(device)
@@ -278,7 +277,7 @@ class DeviceListWidget(QWidget):
             row.deleteLater()
 
     def _sort_rows(self, devices: List[Device]) -> None:
-        """Riordina le righe: online in cima, poi ordine alfabetico."""
+        """Reorder rows: online devices at the top, then alphabetically."""
         sorted_devices = sorted(
             devices,
             key=lambda d: (0 if d.status == "online" else 1, d.name.lower()),
@@ -324,29 +323,29 @@ class DeviceListWidget(QWidget):
             # Forza aggiornamento renderer layer traccia
             self._tracker.map_layer_manager  # type: ignore
             self.style_changed.emit(device_id)
-            log.debug("Stile aggiornato per device_id=%d", device_id)
+            log.debug("Style updated for device_id=%d", device_id)
 
     def _on_clear_track(self, device_id: int):
         mlm = self._tracker.map_layer_manager
         if mlm:
             mlm.clear_device_track(device_id)
         self.track_cleared.emit(device_id)
-        log.debug("Traccia cancellata per device_id=%d", device_id)
+        log.debug("Track cleared for device_id=%d", device_id)
 
     def _on_center_requested(self, device_id: int):
         """Recupera le coordinate attuali del device dal layer e le emette."""
         mlm = self._tracker.map_layer_manager
         if mlm is None or mlm._layer_pos is None:
-            log.warning("Layer posizioni non disponibile per centrare la mappa")
+            log.warning("Position layer not available to centre map")
             return
         fid = mlm._pos_fid.get(device_id)
         if fid is None:
-            log.warning("Nessuna posizione nota per device_id=%d", device_id)
+            log.warning("No known position for device_id=%d", device_id)
             return
         feat = mlm._layer_pos.getFeature(fid)
         geom = feat.geometry() if feat.isValid() else None
         if geom is None or geom.isEmpty():
-            log.warning("Geometria assente per device_id=%d", device_id)
+            log.warning("Geometry absent for device_id=%d", device_id)
             return
         pt = geom.asPoint()
         self.center_on_device.emit(pt.y(), pt.x())   # lat, lon

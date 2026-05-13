@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Dialog impostazioni di connessione a Traccar.
-Legge/scrive tramite PluginSettings (QgsSettings).
+Traccar connection settings dialog.
+Reads/writes via PluginSettings (QgsSettings).
 """
 from __future__ import annotations
 
@@ -24,11 +24,11 @@ log = get_logger(__name__)
 
 
 class SettingsDialog(QDialog):
-    """Dialog modale per configurare la connessione a Traccar e le opzioni predefinite."""
+    """Modal dialog for configuring the Traccar connection and default options."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Sillages – Impostazioni")
+        self.setWindowTitle("Sillages – Settings")
         self.setMinimumWidth(380)
         self._build_ui()
         self._load()
@@ -40,58 +40,58 @@ class SettingsDialog(QDialog):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        # ----- Gruppo connessione -----
-        grp_conn = QGroupBox("Server Traccar")
+        # ----- Connection group -----
+        grp_conn = QGroupBox("Traccar Server")
         form_conn = QFormLayout(grp_conn)
 
         self._url_edit = QLineEdit()
         self._url_edit.setPlaceholderText("https://traccar.intelligeo.net")
-        form_conn.addRow("URL server:", self._url_edit)
+        form_conn.addRow("Server URL:", self._url_edit)
 
         self._user_edit = QLineEdit()
         self._user_edit.setPlaceholderText("admin@example.com")
-        form_conn.addRow("Utente (email):", self._user_edit)
+        form_conn.addRow("Username (email):", self._user_edit)
 
         self._pass_edit = QLineEdit()
         self._pass_edit.setEchoMode(QLineEdit.Password)
         form_conn.addRow("Password:", self._pass_edit)
 
-        self._auto_connect_cb = QCheckBox("Connetti automaticamente all'avvio")
+        self._auto_connect_cb = QCheckBox("Auto-connect on startup")
         form_conn.addRow("", self._auto_connect_cb)
 
         layout.addWidget(grp_conn)
 
-        # ----- Gruppo valori predefiniti traccia -----
-        grp_track = QGroupBox("Impostazioni traccia predefinite")
+        # ----- Default track values group -----
+        grp_track = QGroupBox("Default Track Settings")
         form_track = QFormLayout(grp_track)
 
         self._color_edit = QLineEdit()
         self._color_edit.setPlaceholderText("#0000FF")
-        form_track.addRow("Colore (hex):", self._color_edit)
+        form_track.addRow("Colour (hex):", self._color_edit)
 
         self._width_spin = QSpinBox()
         self._width_spin.setRange(1, 20)
         self._width_spin.setSuffix(" px")
-        form_track.addRow("Spessore traccia:", self._width_spin)
+        form_track.addRow("Track width:", self._width_spin)
 
         self._max_points_spin = QSpinBox()
         self._max_points_spin.setRange(10, 10000)
         self._max_points_spin.setSingleStep(50)
-        self._max_points_spin.setSuffix(" punti")
-        form_track.addRow("Lunghezza max traccia:", self._max_points_spin)
+        self._max_points_spin.setSuffix(" pts")
+        form_track.addRow("Max track length:", self._max_points_spin)
 
         layout.addWidget(grp_track)
 
-        # ----- Note proxy -----
+        # ----- Proxy note -----
         note = QLabel(
-            "<small>Il proxy di rete viene gestito automaticamente dalle "
-            "impostazioni KADAS/QGIS. Non è necessaria alcuna configurazione "
-            "aggiuntiva per ambienti con proxy aziendale o VPN.</small>"
+            "<small>Network proxy settings are managed automatically by "
+            "KADAS/QGIS. No additional configuration is required for "
+            "environments with a corporate proxy or VPN.</small>"
         )
         note.setWordWrap(True)
         layout.addWidget(note)
 
-        # ----- Pulsanti -----
+        # ----- Buttons -----
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
             parent=self,
@@ -127,7 +127,7 @@ class SettingsDialog(QDialog):
         s.set_default_track_max_points(self._max_points_spin.value())
 
         log.debug(
-            "Impostazioni salvate: url=%s user=%s auto_connect=%s",
+            "Settings saved: url=%s user=%s auto_connect=%s",
             s.server_url(),
             s.username(),
             s.auto_connect(),

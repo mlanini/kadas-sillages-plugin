@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-LayerStyler: applica stili QGIS ai layer in-memory di Sillages.
+LayerStyler: applies QGIS styles to the Sillages in-memory layers.
 
-Responsabilità:
-  • Renderer categorizzato per il layer Tracce (colore per device dal campo 'color')
-  • Renderer categorizzato per il layer Posizioni (icona SVG o default per device)
-  • Etichette (QgsPalLayerSettings) per il layer Posizioni se show_label è attivo
+Responsibilities:
+  • Categorised renderer for the Tracks layer (per-device colour from the 'color' field)
+  • Categorised renderer for the Positions layer (SVG or default icon per device)
+  • Labels (QgsPalLayerSettings) for the Positions layer when show_label is active
 
-La difficoltà principale è che i device hanno stili individuali: si usa un
-QgsCategorizedSymbolRenderer per entrambi i layer, con una categoria per device.
-Questo va riapplicato ogni volta che lo stile di un device cambia.
+The main challenge is that devices have individual styles: a
+QgsCategorizedSymbolRenderer is used for both layers, with one category per device.
+It must be reapplied every time a device's style changes.
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ from ..logger import get_logger
 
 log = get_logger(__name__)
 
-# Icona di default per i device
+# Default icon for devices
 _DEFAULT_ICON = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "resources", "kadas_star.png",
@@ -51,10 +51,9 @@ _DEFAULT_ICON = os.path.join(
 
 class LayerStyler:
     """
-    Applica e aggiorna i renderer categorizzati sui layer Sillages.
+    Applies and updates categorised renderers on the Sillages layers.
 
-    Chiamare `apply(devices)` dopo ogni cambio di stile o dopo che
-    la lista device cambia.
+    Call `apply(devices)` after every style change or when the device list changes.
     """
 
     def __init__(
@@ -70,12 +69,12 @@ class LayerStyler:
         layer_pos: Optional[QgsVectorLayer],
         layer_trk: Optional[QgsVectorLayer],
     ) -> None:
-        """Aggiorna i riferimenti ai layer (chiamare dopo create_layers)."""
+        """Update layer references (call after create_layers)."""
         self._layer_pos = layer_pos
         self._layer_trk = layer_trk
 
     def apply(self, devices: List[Device]) -> None:
-        """Ricalcola e applica i renderer categorizzati per tutti i device."""
+        """Recalculate and apply categorised renderers for all devices."""
         if not devices:
             return
         self._apply_track_renderer(devices)
@@ -85,10 +84,10 @@ class LayerStyler:
         for lyr in (self._layer_pos, self._layer_trk):
             if lyr is not None:
                 lyr.triggerRepaint()
-        log.debug("Stili applicati a %d device", len(devices))
+        log.debug("Styles applied to %d devices", len(devices))
 
     # ------------------------------------------------------------------
-    # Layer Tracce
+    # Tracks layer
     # ------------------------------------------------------------------
 
     def _apply_track_renderer(self, devices: List[Device]) -> None:
@@ -118,7 +117,7 @@ class LayerStyler:
         lyr.setRenderer(renderer)
 
     # ------------------------------------------------------------------
-    # Layer Posizioni
+    # Positions layer
     # ------------------------------------------------------------------
 
     def _apply_position_renderer(self, devices: List[Device]) -> None:
@@ -155,14 +154,14 @@ class LayerStyler:
 
     @staticmethod
     def _raster_marker_symbol(path: str, size: float = 10.0) -> QgsMarkerSymbol:
-        """Crea un marker raster (PNG/JPG) usando QgsRasterMarkerSymbolLayer."""
+        """Create a raster marker (PNG/JPG) using QgsRasterMarkerSymbolLayer."""
         sym = QgsMarkerSymbol()
         sym.deleteSymbolLayer(0)
         if _QgsRasterMarkerSL is not None:
             sl = _QgsRasterMarkerSL(path)
             sl.setSize(size)
         else:
-            # Fallback: cerchio semplice se QgsRasterMarkerSymbolLayer non disponibile
+            # Fallback: simple circle when QgsRasterMarkerSymbolLayer is unavailable
             sl = QgsSimpleMarkerSymbolLayer()
             sl.setSize(size * 0.6)
             sl.setColor(QColor("#3388cc"))
@@ -179,7 +178,7 @@ class LayerStyler:
                 sl = _QgsRasterMarkerSL(_DEFAULT_ICON)
                 sl.setSize(10)
             else:
-                # Fallback SVG se disponibile, altrimenti cerchio
+                # Fallback SVG if available, otherwise circle
                 sl = QgsSimpleMarkerSymbolLayer()
                 sl.setSize(6)
                 sl.setColor(QColor(color))
@@ -193,7 +192,7 @@ class LayerStyler:
         return sym
 
     # ------------------------------------------------------------------
-    # Etichette
+    # Labels
     # ------------------------------------------------------------------
 
     def _apply_labels(self, devices: List[Device]) -> None:
@@ -201,7 +200,7 @@ class LayerStyler:
         if lyr is None:
             return
 
-        # Se almeno un device ha le etichette abilitate, attiviamo il layer
+        # Enable labelling if at least one device has labels active
         any_label = any(d.show_label for d in devices)
         if not any_label:
             lyr.setLabelsEnabled(False)
@@ -217,7 +216,7 @@ class LayerStyler:
         text_format.setFont(font)
         text_format.setSize(8)
 
-        # Buffer bianco per leggibilità su qualsiasi sfondo
+        # White buffer for readability on any background
         from qgis.core import QgsTextBufferSettings
         buf = QgsTextBufferSettings()
         buf.setEnabled(True)
@@ -226,17 +225,17 @@ class LayerStyler:
         text_format.setBuffer(buf)
         pal.setFormat(text_format)
 
-        # Posizione etichetta: intorno al punto (AroundPoint è il valore
-        # corretto per LabelPlacement in KADAS Albireo 2 / QGIS 3.x).
-        # OverPoint appartiene a LabelPredefinedPointPosition, non a placement.
+        # Label placement: around the point (AroundPoint is the correct value
+        # for LabelPlacement in KADAS Albireo 2 / QGIS 3.x).
+        # OverPoint belongs to LabelPredefinedPointPosition, not to placement.
         try:
             pal.placement = QgsPalLayerSettings.AroundPoint
         except AttributeError:
-            pal.placement = 0  # fallback numerico = AroundPoint
+            pal.placement = 0  # numeric fallback = AroundPoint
         try:
             pal.quadOffset = QgsPalLayerSettings.QuadrantBelow
         except (AttributeError, TypeError):
-            pass  # quadOffset opzionale, salta se non supportato
+            pass  # quadOffset is optional, skip if unsupported
 
         labeling = QgsVectorLayerSimpleLabeling(pal)
         lyr.setLabeling(labeling)

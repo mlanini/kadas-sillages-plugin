@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-ExportDialog: dialog per esportare la traccia storica di un dispositivo Traccar.
+ExportDialog: dialog for exporting the historic track of a Traccar device.
 
-Permette di selezionare:
-  • Dispositivo (da lista)
-  • Intervallo date (da / a)
-  • Formato output: layer QGIS (traccia), layer QGIS (punti), GeoJSON, GPX, CSV
-  • Percorso file (per output su disco)
+Allows selecting:
+  • Device (from list)
+  • Date range (from / to)
+  • Output format: QGIS layer (track), QGIS layer (points), GeoJSON, GPX, CSV
+  • File path (for disk output)
 """
 from __future__ import annotations
 
@@ -42,12 +42,12 @@ log = get_logger(__name__)
 
 
 class ExportDialog(QDialog):
-    """Dialog modale per l'esportazione dello storico tracce."""
+    """Modal dialog for exporting historic tracks."""
 
     def __init__(self, connection_manager, parent=None):
         super().__init__(parent)
         self._conn = connection_manager
-        self.setWindowTitle("Sillages – Esporta traccia storica")
+        self.setWindowTitle("Sillages – Export Historic Track")
         self.setMinimumWidth(420)
         self._build_ui()
         self._populate_devices()
@@ -59,15 +59,15 @@ class ExportDialog(QDialog):
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        # ----- Dispositivo -----
-        grp_dev = QGroupBox("Dispositivo")
+        # ----- Device -----
+        grp_dev = QGroupBox("Device")
         form_dev = QFormLayout(grp_dev)
         self._device_combo = QComboBox()
-        form_dev.addRow("Dispositivo:", self._device_combo)
+        form_dev.addRow("Device:", self._device_combo)
         layout.addWidget(grp_dev)
 
-        # ----- Intervallo temporale -----
-        grp_time = QGroupBox("Intervallo temporale (UTC)")
+        # ----- Time range -----
+        grp_time = QGroupBox("Time Range (UTC)")
         form_time = QFormLayout(grp_time)
 
         now = QDateTime.currentDateTimeUtc()
@@ -88,24 +88,24 @@ class ExportDialog(QDialog):
         shortcuts = QWidget()
         h_sc = QHBoxLayout(shortcuts)
         h_sc.setContentsMargins(0, 0, 0, 0)
-        for label, delta_hours in [("Ultima ora", 1), ("Ultime 6h", 6),
-                                    ("Ultime 24h", 24), ("Ultima settimana", 168)]:
+        for label, delta_hours in [("Last hour", 1), ("Last 6h", 6),
+                                    ("Last 24h", 24), ("Last week", 168)]:
             btn = QPushButton(label)
             btn.setFixedHeight(22)
             btn.clicked.connect(lambda _, dh=delta_hours: self._set_range(dh))
             h_sc.addWidget(btn)
-        form_time.addRow("Rapido:", shortcuts)
+        form_time.addRow("Quick:", shortcuts)
         layout.addWidget(grp_time)
 
-        # ----- Formato output -----
-        grp_fmt = QGroupBox("Formato output")
+        # ----- Output format -----
+        grp_fmt = QGroupBox("Output Format")
         v_fmt = QVBoxLayout(grp_fmt)
 
-        self._rb_layer_track  = QRadioButton("Layer QGIS – Traccia (LineString nel progetto)")
-        self._rb_layer_points = QRadioButton("Layer QGIS – Punti (MultiPoint nel progetto)")
-        self._rb_geojson      = QRadioButton("File GeoJSON")
-        self._rb_gpx          = QRadioButton("File GPX")
-        self._rb_csv          = QRadioButton("File CSV")
+        self._rb_layer_track  = QRadioButton("QGIS Layer – Track (LineString in project)")
+        self._rb_layer_points = QRadioButton("QGIS Layer – Points (MultiPoint in project)")
+        self._rb_geojson      = QRadioButton("GeoJSON file")
+        self._rb_gpx          = QRadioButton("GPX file")
+        self._rb_csv          = QRadioButton("CSV file")
         self._rb_layer_track.setChecked(True)
 
         for rb in (self._rb_layer_track, self._rb_layer_points,
@@ -118,7 +118,7 @@ class ExportDialog(QDialog):
         h_file = QHBoxLayout(file_row)
         h_file.setContentsMargins(0, 0, 0, 0)
         self._file_edit = QLineEdit()
-        self._file_edit.setPlaceholderText("Seleziona percorso file…")
+        self._file_edit.setPlaceholderText("Select output file path…")
         self._btn_browse_file = QPushButton("…")
         self._btn_browse_file.setFixedWidth(28)
         self._btn_browse_file.clicked.connect(self._browse_file)
@@ -130,11 +130,11 @@ class ExportDialog(QDialog):
 
         layout.addWidget(grp_fmt)
 
-        # ----- Pulsanti -----
+        # ----- Buttons -----
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self
         )
-        self._buttons.button(QDialogButtonBox.Ok).setText("Esporta")
+        self._buttons.button(QDialogButtonBox.Ok).setText("Export")
         self._buttons.accepted.connect(self._do_export)
         self._buttons.rejected.connect(self.reject)
         layout.addWidget(self._buttons)
@@ -151,7 +151,7 @@ class ExportDialog(QDialog):
                 f"[{d.status}] {d.name}", userData=d.id
             )
         if not devices:
-            self._device_combo.addItem("(nessun dispositivo disponibile)", userData=None)
+            self._device_combo.addItem("(no devices available)", userData=None)
             self._buttons.button(QDialogButtonBox.Ok).setEnabled(False)
 
     # ------------------------------------------------------------------
@@ -178,7 +178,7 @@ class ExportDialog(QDialog):
             filt = "CSV (*.csv)"
             ext = ".csv"
 
-        path, _ = QFileDialog.getSaveFileName(self, "Salva file", "", filt)
+        path, _ = QFileDialog.getSaveFileName(self, "Save file", "", filt)
         if path:
             if not path.lower().endswith(ext):
                 path += ext
@@ -191,24 +191,24 @@ class ExportDialog(QDialog):
 
         device = self._conn.get_device_by_id(device_id)
         if device is None:
-            QMessageBox.warning(self, "Errore", "Dispositivo non trovato.")
+            QMessageBox.warning(self, "Error", "Device not found.")
             return
 
         from_dt = self._from_dt.dateTime().toPyDateTime().replace(tzinfo=timezone.utc)
         to_dt   = self._to_dt.dateTime().toPyDateTime().replace(tzinfo=timezone.utc)
 
         if from_dt >= to_dt:
-            QMessageBox.warning(self, "Errore", "La data 'Da' deve essere precedente a 'A'.")
+            QMessageBox.warning(self, "Error", "The 'From' date must be earlier than 'To'.")
             return
 
         is_file_fmt = self._rb_geojson.isChecked() or self._rb_gpx.isChecked() or self._rb_csv.isChecked()
         if is_file_fmt and not self._file_edit.text().strip():
-            QMessageBox.warning(self, "Errore", "Seleziona un percorso file di destinazione.")
+            QMessageBox.warning(self, "Error", "Please select a destination file path.")
             return
 
         # Progress dialog
         prog = QProgressDialog(
-            f"Download posizioni per {device.name}…", "Annulla", 0, 0, self
+            f"Downloading positions for {device.name}…", "Cancel", 0, 0, self
         )
         prog.setWindowModality(Qt.WindowModal)
         prog.show()
@@ -220,21 +220,21 @@ class ExportDialog(QDialog):
 
             if self._rb_layer_track.isChecked():
                 lyr = exp.export_to_layer(device, from_dt, to_dt, as_track=True)
-                msg = f"Traccia aggiunta al progetto come layer '{lyr.name()}'" if lyr else "Nessuna posizione trovata."
+                msg = f"Track added to project as layer '{lyr.name()}'" if lyr else "No positions found."
             elif self._rb_layer_points.isChecked():
                 lyr = exp.export_to_layer(device, from_dt, to_dt, as_track=False)
-                msg = f"Punti aggiunti al progetto come layer '{lyr.name()}'" if lyr else "Nessuna posizione trovata."
+                msg = f"Points added to project as layer '{lyr.name()}'" if lyr else "No positions found."
             else:
                 fpath = self._file_edit.text().strip()
                 fmt = "geojson" if self._rb_geojson.isChecked() else ("gpx" if self._rb_gpx.isChecked() else "csv")
                 ok = exp.export_to_file(device, from_dt, to_dt, fpath, fmt)
-                msg = f"File salvato: {fpath}" if ok else "Esportazione fallita. Controlla i log."
+                msg = f"File saved: {fpath}" if ok else "Export failed. Check the logs."
 
             prog.close()
-            QMessageBox.information(self, "Esportazione completata", msg)
+            QMessageBox.information(self, "Export complete", msg)
             self.accept()
 
         except Exception as exc:
             prog.close()
-            log.error("Errore esportazione: %s", exc)
-            QMessageBox.critical(self, "Errore", f"Esportazione fallita:\n{exc}")
+            log.error("Export error: %s", exc)
+            QMessageBox.critical(self, "Error", f"Export failed:\n{exc}")
