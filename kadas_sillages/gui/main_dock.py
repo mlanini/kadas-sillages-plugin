@@ -111,11 +111,17 @@ class MainDock(QDockWidget):
         self._btn_settings.setToolTip("Connection settings")
         self._btn_settings.clicked.connect(self._on_settings_clicked)
 
+        self._btn_about = QPushButton("ℹ")
+        self._btn_about.setFixedWidth(28)
+        self._btn_about.setToolTip("About Sillages")
+        self._btn_about.clicked.connect(self._on_about_clicked)
+
         h.addWidget(self._btn_connect)
         h.addWidget(self._btn_refresh)
         h.addWidget(self._btn_track)
         h.addWidget(self._btn_export)
         h.addWidget(self._btn_settings)
+        h.addWidget(self._btn_about)
         layout.addWidget(toolbar_row)
 
         # --- Connected user info ---
@@ -192,6 +198,11 @@ class MainDock(QDockWidget):
     def _on_settings_clicked(self):
         from .settings_dialog import SettingsDialog
         dlg = SettingsDialog(self)
+        dlg.exec_()
+
+    def _on_about_clicked(self):
+        from .about_dialog import AboutDialog
+        dlg = AboutDialog(self)
         dlg.exec_()
 
     # ------------------------------------------------------------------
