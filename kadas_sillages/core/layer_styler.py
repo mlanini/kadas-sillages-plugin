@@ -102,7 +102,7 @@ class LayerStyler:
             sym.deleteSymbolLayer(0)
             line_sl = QgsSimpleLineSymbolLayer()
             line_sl.setColor(QColor(device.track_color))
-            line_sl.setWidth(device.track_width * 0.1)   # QGIS usa unità mappa (~mm)
+            line_sl.setWidth(device.track_width)
             line_sl.setWidthUnit(
                 __import__(
                     "qgis.core", fromlist=["QgsUnitTypes"]

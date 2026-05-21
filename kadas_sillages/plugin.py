@@ -52,11 +52,6 @@ class KadasSillagesPlugin:
                 self.iface.PLUGIN_MENU,
                 self.iface.GPS_TAB,
             )
-            self.iface.addAction(
-                self._toggle_action,
-                self.iface.PLUGIN_MENU,
-                self.iface.PLUGIN_MENU,
-            )
         except Exception:
             self.iface.addPluginToMenu(self.PLUGIN_NAME, self._toggle_action)
 
